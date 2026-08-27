@@ -15,6 +15,7 @@
     --accent: #1769aa;
     --accent-hover: #12578d;
     --error: #b42318;
+    --success: #16794b;
   }
 
   @media (prefers-color-scheme: dark) {
@@ -27,12 +28,11 @@
       --accent: #4da3df;
       --accent-hover: #78b9e7;
       --error: #ff8b82;
+      --success: #55c98b;
     }
   }
 
-  * {
-    box-sizing: border-box;
-  }
+  * { box-sizing: border-box; }
 
   body {
     margin: 0;
@@ -66,45 +66,89 @@
     margin-bottom: 20px;
   }
 
-  label {
+  h2 {
+    margin: 0 0 14px;
+    font-size: 1.25rem;
+  }
+
+  .steps {
+    margin: 0 0 16px 22px;
+    padding: 0;
+  }
+
+  .steps li {
+    margin: 5px 0;
+  }
+
+  .field-label {
     display: block;
     font-weight: 650;
     margin-bottom: 8px;
   }
 
-  .instructions {
-    margin: 0 0 14px;
+  .coordinate-input {
+    width: 100%;
     padding: 12px 14px;
     border: 1px solid var(--border);
     border-radius: 10px;
-    background: var(--bg);
-    color: var(--muted);
-    font-size: 0.92rem;
-  }
-
-  .instructions strong {
+    background: var(--card);
     color: var(--text);
+    font: 14px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   }
 
-  .instructions ol {
-    margin: 8px 0 10px 20px;
-    padding: 0;
+  .coordinate-help {
+    color: var(--muted);
+    font-size: .86rem;
+    margin: 7px 0 0;
   }
 
-  .instructions li {
-    margin: 3px 0;
+  .api-box {
+    display: none;
+    margin-top: 18px;
+    padding: 14px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--bg);
+  }
+
+  .api-box.visible {
+    display: block;
+  }
+
+  .api-title {
+    font-weight: 650;
+    margin-bottom: 8px;
+  }
+
+  .api-link {
+    display: inline-block;
+    padding: 10px 14px;
+    border-radius: 9px;
+    background: var(--accent);
+    color: white;
+    text-decoration: none;
+    font-weight: 650;
+  }
+
+  .api-link:hover {
+    background: var(--accent-hover);
   }
 
   .api-url {
+    margin-top: 10px;
     padding: 9px 10px;
     border-radius: 7px;
     background: var(--card);
     border: 1px solid var(--border);
     overflow-wrap: anywhere;
+    color: var(--muted);
+    font-size: .8rem;
   }
 
-  .api-url code {
-    font-size: 0.82rem;
+  .json-label {
+    display: block;
+    font-weight: 650;
+    margin-bottom: 8px;
   }
 
   textarea {
@@ -154,6 +198,10 @@
 
   .message.error {
     color: var(--error);
+  }
+
+  .message.success {
+    color: var(--success);
   }
 
   .result-header {
@@ -219,35 +267,77 @@
 </head>
 
 <body>
-
 <div class="wrap">
 
   <h1>Fishing Pressure Table</h1>
-
   <p class="subtitle">
-    Paste your weather JSON below and generate the 0–24 hour pressure table.
+    Get pressure data for your fishing spot and generate a 0–24 hour pressure table.
   </p>
 
   <div class="card">
 
-    <label for="jsonInput">JSON report</label>
+    <h2>1. Get Your Fishing Spot Coordinates</h2>
 
-    <div class="instructions">
+    <ol class="steps">
+      <li>Open Google Maps.</li>
+      <li>Right-click the spot where you intend to fish.</li>
+      <li>Click the latitude/longitude coordinates to copy them.</li>
+      <li>Paste them into the box below.</li>
+    </ol>
 
-      <strong>How to get your JSON:</strong>
+    <label class="field-label" for="coordinateInput">
+      Fishing Spot Coordinates
+    </label>
 
-      <ol>
-        <li>Go to the Open-Meteo URL below.</li>
-        <li>Replace <code>xx.xxxxxxxxxxx</code> and <code>-xx.xxxxxxxxxxxx</code> with your latitude and longitude.</li>
-        <li>Copy the raw JSON response from the page.</li>
-        <li>Paste it into the box below and click <strong>Generate Table</strong>.</li>
-      </ol>
+    <input
+      id="coordinateInput"
+      class="coordinate-input"
+      type="text"
+      inputmode="decimal"
+      autocomplete="off"
+      placeholder="Example: 39.539394, -77.911750"
+    >
 
-      <div class="api-url">
-        <code>https://api.open-meteo.com/v1/gfs?latitude=xx.xxxxxxxxxxx&amp;longitude=-xx.xxxxxxxxxxxx&amp;hourly=pressure_msl&amp;current=pressure_msl&amp;timezone=America%2FNew_York&amp;forecast_hours=25</code>
+    <p class="coordinate-help">
+      Enter coordinates in the format: latitude, longitude
+    </p>
+
+    <div id="apiBox" class="api-box">
+
+      <div class="api-title">
+        Open-Meteo Pressure Data
       </div>
 
+      <a
+        id="apiLink"
+        class="api-link"
+        href="#"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        Get Pressure JSON →
+      </a>
+
+      <div id="apiUrl" class="api-url"></div>
+
     </div>
+
+    <div id="coordinateMessage" class="message" aria-live="polite"></div>
+
+  </div>
+
+
+  <div class="card">
+
+    <h2>2. Paste the Open-Meteo JSON</h2>
+
+    <label class="json-label" for="jsonInput">
+      JSON report
+    </label>
+
+    <p class="rules" style="margin-top: 0; margin-bottom: 12px;">
+      Copy the <strong>raw JSON</strong> from the Open-Meteo page and paste it into the box below.
+    </p>
 
     <textarea
       id="jsonInput"
@@ -262,17 +352,8 @@
 
     <div id="message" class="message" aria-live="polite"></div>
 
-    <p class="rules">
-      <strong>Rules:</strong>
-      Uses <code>hourly.time[0]</code> and
-      <code>hourly.pressure_msl[0]</code> as TIME 0;
-      ignores the <code>current</code> values;
-      selects hourly indices 0, 2, 4 ... 24;
-      converts hPa to inHg;
-      displays pressure and change to 2 decimals.
-    </p>
-
   </div>
+
 
   <div class="card">
 
@@ -291,7 +372,6 @@
     <div class="table-wrap">
 
       <table id="resultTable" hidden>
-
         <thead>
           <tr>
             <th>TIME</th>
@@ -299,9 +379,7 @@
             <th>CHANGE</th>
           </tr>
         </thead>
-
         <tbody></tbody>
-
       </table>
 
       <div id="empty" class="empty">
@@ -314,25 +392,169 @@
 
 </div>
 
-<script>
 
+<script>
 (() => {
 
   const HPA_TO_INHG = 0.0295299830714;
 
-  const input = document.getElementById("jsonInput");
-  const generate = document.getElementById("generate");
-  const clear = document.getElementById("clear");
-  const copy = document.getElementById("copy");
-  const message = document.getElementById("message");
-  const table = document.getElementById("resultTable");
-  const tbody = table.querySelector("tbody");
-  const empty = document.getElementById("empty");
+  const coordinateInput =
+    document.getElementById("coordinateInput");
+
+  const apiBox =
+    document.getElementById("apiBox");
+
+  const apiLink =
+    document.getElementById("apiLink");
+
+  const apiUrl =
+    document.getElementById("apiUrl");
+
+  const coordinateMessage =
+    document.getElementById("coordinateMessage");
+
+  const input =
+    document.getElementById("jsonInput");
+
+  const generate =
+    document.getElementById("generate");
+
+  const clear =
+    document.getElementById("clear");
+
+  const copy =
+    document.getElementById("copy");
+
+  const message =
+    document.getElementById("message");
+
+  const table =
+    document.getElementById("resultTable");
+
+  const tbody =
+    table.querySelector("tbody");
+
+  const empty =
+    document.getElementById("empty");
+
+
+  function setCoordinateMessage(text, error = false) {
+
+    coordinateMessage.textContent = text;
+
+    coordinateMessage.className =
+      "message" + (error ? " error" : "");
+
+  }
+
+
+  function parseCoordinates(value) {
+
+    // Accepts common Google Maps formats such as:
+    // 39.539394, -77.911750
+    // 39.539394,-77.911750
+
+    const matches =
+      value.match(
+        /(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)/
+      );
+
+    if (!matches) {
+      return null;
+    }
+
+    const latitude =
+      Number(matches[1]);
+
+    const longitude =
+      Number(matches[2]);
+
+    if (
+      !Number.isFinite(latitude) ||
+      !Number.isFinite(longitude) ||
+      latitude < -90 ||
+      latitude > 90 ||
+      longitude < -180 ||
+      longitude > 180
+    ) {
+      return null;
+    }
+
+    return {
+      latitude,
+      longitude
+    };
+
+  }
+
+
+  function updateApiLink() {
+
+    const coords =
+      parseCoordinates(
+        coordinateInput.value.trim()
+      );
+
+
+    if (!coords) {
+
+      apiBox.classList.remove("visible");
+
+      if (coordinateInput.value.trim()) {
+        setCoordinateMessage(
+          "Please paste coordinates in the format: latitude, longitude",
+          true
+        );
+      } else {
+        setCoordinateMessage("");
+      }
+
+      return;
+
+    }
+
+
+    const latitude =
+      coords.latitude.toFixed(12);
+
+    const longitude =
+      coords.longitude.toFixed(12);
+
+
+    const url =
+      "https://api.open-meteo.com/v1/gfs" +
+      "?latitude=" + encodeURIComponent(latitude) +
+      "&longitude=" + encodeURIComponent(longitude) +
+      "&hourly=pressure_msl" +
+      "&current=pressure_msl" +
+      "&timezone=America%2FNew_York" +
+      "&forecast_hours=25";
+
+
+    apiLink.href = url;
+
+    apiUrl.textContent = url;
+
+    apiBox.classList.add("visible");
+
+    setCoordinateMessage(
+      "Coordinates accepted. Your Open-Meteo link is ready."
+    );
+
+  }
+
+
+  coordinateInput.addEventListener(
+    "input",
+    updateApiLink
+  );
 
 
   function formatPressure(hpa) {
 
-    return (hpa * HPA_TO_INHG).toFixed(2);
+    return (
+      hpa * HPA_TO_INHG
+    ).toFixed(2);
 
   }
 
@@ -341,13 +563,17 @@
 
     // Avoid displaying "-0.00" from floating-point arithmetic.
 
-    const rounded = Math.round(change * 100) / 100;
+    const rounded =
+      Math.round(change * 100) / 100;
 
     if (rounded === 0) {
       return "0.00";
     }
 
-    return (rounded > 0 ? "+" : "") + rounded.toFixed(2);
+    return (
+      (rounded > 0 ? "+" : "") +
+      rounded.toFixed(2)
+    );
 
   }
 
@@ -379,7 +605,8 @@
 
     try {
 
-      data = JSON.parse(input.value);
+      data =
+        JSON.parse(input.value);
 
     } catch (e) {
 
@@ -393,7 +620,8 @@
     }
 
 
-    const hourly = data?.hourly;
+    const hourly =
+      data?.hourly;
 
 
     if (
@@ -439,7 +667,9 @@
     ) {
 
       const hpa =
-        Number(hourly.pressure_msl[index]);
+        Number(
+          hourly.pressure_msl[index]
+        );
 
 
       if (!Number.isFinite(hpa)) {
@@ -475,7 +705,8 @@
       });
 
 
-      previousInHg = inHg;
+      previousInHg =
+        inHg;
 
     }
 
@@ -502,7 +733,8 @@
 
     empty.hidden = true;
 
-    copy.style.display = "inline-block";
+    copy.style.display =
+      "inline-block";
 
 
     setMessage(
@@ -523,7 +755,9 @@
 
       lines.push(
         [...row.cells]
-          .map(cell => cell.textContent)
+          .map(
+            cell => cell.textContent
+          )
           .join("\t")
       );
 
@@ -547,17 +781,30 @@
 
       input.value = "";
 
+      coordinateInput.value = "";
+
+      apiBox.classList.remove(
+        "visible"
+      );
+
+      apiLink.href = "#";
+
+      apiUrl.textContent = "";
+
       tbody.innerHTML = "";
 
       table.hidden = true;
 
-      copy.style.display = "none";
+      copy.style.display =
+        "none";
 
       empty.hidden = false;
 
       setMessage("");
 
-      input.focus();
+      setCoordinateMessage("");
+
+      coordinateInput.focus();
 
     }
   );
@@ -603,7 +850,6 @@
   );
 
 })();
-
 </script>
 
 </body>
