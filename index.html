@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fishing Pressure Table</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #f4f6f8;
+    --card: #ffffff;
+    --text: #18212b;
+    --muted: #66717d;
+    --border: #d9dee4;
+    --accent: #1769aa;
+    --accent-hover: #12578d;
+    --error: #b42318;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #101419;
+      --card: #171d23;
+      --text: #edf2f7;
+      --muted: #9ba7b3;
+      --border: #303943;
+      --accent: #4da3df;
+      --accent-hover: #78b9e7;
+      --error: #ff8b82;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.45;
+  }
+  .wrap {
+    width: min(900px, calc(100% - 32px));
+    margin: 40px auto 60px;
+  }
+  h1 { margin: 0 0 8px; font-size: 2rem; }
+  .subtitle { color: var(--muted); margin: 0 0 24px; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 22px;
+    box-shadow: 0 2px 12px rgba(0,0,0,.05);
+    margin-bottom: 20px;
+  }
+  label {
+    display: block;
+    font-weight: 650;
+    margin-bottom: 8px;
+  }
+  textarea {
+    width: 100%;
+    min-height: 280px;
+    resize: vertical;
+    padding: 14px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--card);
+    color: var(--text);
+    font: 13px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  .actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+  }
+  button {
+    border: 0;
+    border-radius: 9px;
+    padding: 10px 16px;
+    font-weight: 650;
+    cursor: pointer;
+    background: var(--accent);
+    color: white;
+  }
+  button:hover { background: var(--accent-hover); }
+  button.secondary {
+    background: transparent;
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+  .message {
+    margin-top: 12px;
+    min-height: 1.4em;
+    color: var(--muted);
+  }
+  .message.error { color: var(--error); }
+  .result-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 10px;
+  }
+  .result-header h2 { margin: 0; font-size: 1.25rem; }
+  .table-wrap { overflow-x: auto; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-variant-numeric: tabular-nums;
+  }
+  th, td {
+    padding: 11px 14px;
+    border-bottom: 1px solid var(--border);
+    text-align: right;
+  }
+  th {
+    text-align: right;
+    font-size: .86rem;
+    letter-spacing: .04em;
+  }
+  th:first-child, td:first-child { text-align: center; }
+  tbody tr:last-child td { border-bottom: 0; }
+  .empty { color: var(--muted); text-align: center; padding: 24px; }
+  .rules {
+    color: var(--muted);
+    font-size: .92rem;
+    margin: 18px 0 0;
+  }
+  .rules strong { color: var(--text); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Fishing Pressure Table</h1>
+  <p class="subtitle">Paste your weather JSON below and generate the 0–24 hour pressure table.</p>
+
+  <div class="card">
+    <label for="jsonInput">JSON report</label>
+    <textarea id="jsonInput" spellcheck="false" placeholder="Paste your JSON report here..."></textarea>
+    <div class="actions">
+      <button id="generate">Generate Table</button>
+      <button id="clear" class="secondary">Clear</button>
+    </div>
+    <div id="message" class="message" aria-live="polite"></div>
+    <p class="rules">
+      <strong>Rules:</strong> Uses <code>hourly.time[0]</code> and <code>hourly.pressure_msl[0]</code> as TIME 0;
+      ignores the <code>current</code> values; selects hourly indices 0, 2, 4 ... 24;
+      converts hPa to inHg; displays pressure and change to 2 decimals.
+    </p>
+  </div>
+
+  <div class="card">
+    <div class="result-header">
+      <h2>Result</h2>
+      <button id="copy" class="secondary" style="display:none;">Copy Table</button>
+    </div>
+    <div class="table-wrap">
+      <table id="resultTable" hidden>
+        <thead>
+          <tr><th>TIME</th><th>PRESSURE</th><th>CHANGE</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <div id="empty" class="empty">Your generated table will appear here.</div>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const HPA_TO_INHG = 0.0295299830714;
+  const input = document.getElementById("jsonInput");
+  const generate = document.getElementById("generate");
+  const clear = document.getElementById("clear");
+  const copy = document.getElementById("copy");
+  const message = document.getElementById("message");
+  const table = document.getElementById("resultTable");
+  const tbody = table.querySelector("tbody");
+  const empty = document.getElementById("empty");
+
+  function formatPressure(hpa) {
+    return (hpa * HPA_TO_INHG).toFixed(2);
+  }
+
+  function formatChange(change) {
+    // Avoid displaying "-0.00" from floating-point arithmetic.
+    const rounded = Math.round(change * 100) / 100;
+    if (rounded === 0) return "0.00";
+    return (rounded > 0 ? "+" : "") + rounded.toFixed(2);
+  }
+
+  function setMessage(text, error = false) {
+    message.textContent = text;
+    message.className = "message" + (error ? " error" : "");
+  }
+
+  function generateTable() {
+    setMessage("");
+    tbody.innerHTML = "";
+    table.hidden = true;
+    copy.style.display = "none";
+    empty.hidden = false;
+
+    let data;
+    try {
+      data = JSON.parse(input.value);
+    } catch (e) {
+      setMessage("That doesn't appear to be valid JSON.", true);
+      return;
+    }
+
+    const hourly = data?.hourly;
+    if (!hourly || !Array.isArray(hourly.time) || !Array.isArray(hourly.pressure_msl)) {
+      setMessage("The JSON must contain hourly.time and hourly.pressure_msl arrays.", true);
+      return;
+    }
+
+    if (hourly.time.length < 25 || hourly.pressure_msl.length < 25) {
+      setMessage("At least 25 hourly entries are required so TIME can run from 0 through 24.", true);
+      return;
+    }
+
+    const rows = [];
+    let previousInHg = null;
+
+    for (let index = 0; index <= 24; index += 2) {
+      const hpa = Number(hourly.pressure_msl[index]);
+      if (!Number.isFinite(hpa)) {
+        setMessage(`Invalid pressure value at hourly index ${index}.`, true);
+        return;
+      }
+
+      const inHg = hpa * HPA_TO_INHG;
+      rows.push({
+        time: index,
+        pressure: formatPressure(hpa),
+        change: previousInHg === null ? "—" : formatChange(inHg - previousInHg)
+      });
+      previousInHg = inHg;
+    }
+
+    for (const row of rows) {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `<td>${row.time}</td><td>${row.pressure}</td><td>${row.change}</td>`;
+      tbody.appendChild(tr);
+    }
+
+    table.hidden = false;
+    empty.hidden = true;
+    copy.style.display = "inline-block";
+    setMessage(`Generated ${rows.length} rows from hourly indices 0 through 24.`);
+  }
+
+  function tableText() {
+    const lines = ["TIME\tPRESSURE\tCHANGE"];
+    [...tbody.rows].forEach(row => {
+      lines.push([...row.cells].map(cell => cell.textContent).join("\t"));
+    });
+    return lines.join("\n");
+  }
+
+  generate.addEventListener("click", generateTable);
+
+  clear.addEventListener("click", () => {
+    input.value = "";
+    tbody.innerHTML = "";
+    table.hidden = true;
+    copy.style.display = "none";
+    empty.hidden = false;
+    setMessage("");
+    input.focus();
+  });
+
+  copy.addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(tableText());
+      setMessage("Table copied to the clipboard.");
+    } catch {
+      setMessage("Couldn't access the clipboard. You can select and copy the table manually.", true);
+    }
+  });
+
+  input.addEventListener("paste", () => {
+    setTimeout(generateTable, 0);
+  });
+})();
+</script>
+</body>
+</html>
