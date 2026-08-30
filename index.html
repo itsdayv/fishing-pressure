@@ -588,6 +588,24 @@
   }
 
 
+  function formatTime(isoTime) {
+    const [datePart, timePart] = isoTime.split("T");
+    const [year, month, day] = datePart.split("-").map(Number);
+    const [hours, minutes] = timePart.split(":").map(Number);
+
+    const date = new Date(year, month - 1, day, hours, minutes);
+
+    return new Intl.DateTimeFormat("en-US", {
+      month: "2-digit",
+      day: "2-digit",
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+      timeZone: "America/New_York"
+    }).format(date) + " ET";
+  }
+
+
   function generateTable() {
 
     setMessage("");
@@ -646,7 +664,7 @@
     ) {
 
       setMessage(
-        "At least 25 hourly entries are required so TIME can run from 0 through 24.",
+        "At least 25 hourly entries are required so the table can use 2-hour increments through the 24-hour period.",
         true
       );
 
@@ -690,7 +708,7 @@
 
       rows.push({
 
-        time: index,
+        time: formatTime(hourly.time[index]),
 
         pressure:
           formatPressure(hpa),
@@ -738,7 +756,7 @@
 
 
     setMessage(
-      `Generated ${rows.length} rows from hourly indices 0 through 24.`
+      `Generated ${rows.length} rows using 2-hour increments from the hourly data.`
     );
 
   }
