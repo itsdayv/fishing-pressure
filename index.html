@@ -257,7 +257,7 @@
     >
 
     <p class="coordinate-help">
-      Enter coordinates in the format: latitude, longitude
+      Enter coordinates as decimal degrees or Google Maps DMS format
     </p>
 
     <div class="actions">
@@ -365,24 +365,68 @@
 
   function parseCoordinates(value) {
 
-    // Accepts common Google Maps formats such as:
+    // Accepts decimal Google Maps coordinates such as:
     // 39.539394, -77.911750
     // 39.539394,-77.911750
 
-    const matches =
+    let matches =
       value.match(
         /(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)/
       );
+
+    if (matches) {
+      const latitude = Number(matches[1]);
+      const longitude = Number(matches[2]);
+
+      if (
+        Number.isFinite(latitude) &&
+        Number.isFinite(longitude) &&
+        latitude >= -90 &&
+        latitude <= 90 &&
+        longitude >= -180 &&
+        longitude <= 180
+      ) {
+        return { latitude, longitude };
+      }
+    }
+
+    // Also accepts Google Maps degrees/minutes/seconds (DMS), such as:
+    // 40°47'00.2\"N 73°53'01.1\"W
+    matches = value.match(
+      /^\s*(\d{1,3})\s*°\s*(\d{1,2})\s*['′]\s*(\d+(?:\.\d+)?)\s*[\"″]\s*([NS])\s+(\d{1,3})\s*°\s*(\d{1,2})\s*['′]\s*(\d+(?:\.\d+)?)\s*[\"″]\s*([EW])\s*$/i
+    );
 
     if (!matches) {
       return null;
     }
 
-    const latitude =
-      Number(matches[1]);
+    const latDegrees = Number(matches[1]);
+    const latMinutes = Number(matches[2]);
+    const latSeconds = Number(matches[3]);
+    const latDirection = matches[4].toUpperCase();
 
-    const longitude =
-      Number(matches[2]);
+    const lonDegrees = Number(matches[5]);
+    const lonMinutes = Number(matches[6]);
+    const lonSeconds = Number(matches[7]);
+    const lonDirection = matches[8].toUpperCase();
+
+    if (
+      latMinutes >= 60 ||
+      latSeconds >= 60 ||
+      lonMinutes >= 60 ||
+      lonSeconds >= 60
+    ) {
+      return null;
+    }
+
+    let latitude =
+      latDegrees + latMinutes / 60 + latSeconds / 3600;
+
+    let longitude =
+      lonDegrees + lonMinutes / 60 + lonSeconds / 3600;
+
+    if (latDirection === "S") latitude *= -1;
+    if (lonDirection === "W") longitude *= -1;
 
     if (
       !Number.isFinite(latitude) ||
@@ -412,7 +456,7 @@
 
     if (!coords) {
       setCoordinateMessage(
-        "Please paste coordinates in the format: latitude, longitude",
+        "Please paste coordinates as decimal degrees or DMS (degrees, minutes, seconds).",
         true
       );
       return;
