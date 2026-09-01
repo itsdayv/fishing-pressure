@@ -333,6 +333,13 @@
 <script>
 (() => {
 
+  // Choose which Open-Meteo endpoint to use:
+  // GFS/HRRR: "https://api.open-meteo.com/v1/gfs"
+  // Best-match forecast: "https://api.open-meteo.com/v1/forecast"
+
+  //const API_ENDPOINT = "https://api.open-meteo.com/v1/gfs";
+  const API_ENDPOINT = "https://api.open-meteo.com/v1/forecast";
+
   const HPA_TO_INHG = 0.0295299830714;
 
   const coordinateInput =
@@ -479,7 +486,7 @@
       coords.longitude.toFixed(12);
 
     const url =
-      "https://api.open-meteo.com/v1/gfs" +
+      API_ENDPOINT +
       "?latitude=" + encodeURIComponent(latitude) +
       "&longitude=" + encodeURIComponent(longitude) +
       "&hourly=pressure_msl" +
