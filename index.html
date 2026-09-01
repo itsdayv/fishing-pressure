@@ -201,6 +201,16 @@
     text-align: center;
   }
 
+  .trend-up {
+    color: #d32f2f;
+    font-weight: 650;
+  }
+
+  .trend-down {
+    color: #2e7d32;
+    font-weight: 650;
+  }
+
   tbody tr:last-child td {
     border-bottom: 0;
   }
@@ -680,10 +690,17 @@
         document.createElement("tr");
 
 
+      const trendClass =
+        row.change.startsWith("↑")
+          ? "trend-up"
+          : row.change.startsWith("↓")
+            ? "trend-down"
+            : "trend-neutral";
+
       tr.innerHTML = `
         <td>${row.time}</td>
         <td>${row.pressure}</td>
-        <td>${row.change}</td>
+        <td class="${trendClass}">${row.change}</td>
       `;
 
 
