@@ -102,49 +102,6 @@
     margin: 7px 0 0;
   }
 
-  .api-box {
-    display: none;
-    margin-top: 18px;
-    padding: 14px;
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    background: var(--bg);
-  }
-
-  .api-box.visible {
-    display: block;
-  }
-
-  .api-title {
-    font-weight: 650;
-    margin-bottom: 8px;
-  }
-
-  .api-link {
-    display: inline-block;
-    padding: 10px 14px;
-    border-radius: 9px;
-    background: var(--accent);
-    color: white;
-    text-decoration: none;
-    font-weight: 650;
-  }
-
-  .api-link:hover {
-    background: var(--accent-hover);
-  }
-
-  .api-url {
-    margin-top: 10px;
-    padding: 9px 10px;
-    border-radius: 7px;
-    background: var(--card);
-    border: 1px solid var(--border);
-    overflow-wrap: anywhere;
-    color: var(--muted);
-    font-size: .8rem;
-  }
-
   .json-label {
     display: block;
     font-weight: 650;
@@ -283,6 +240,7 @@
       <li>Right-click the spot where you intend to fish.</li>
       <li>Click the latitude/longitude coordinates to copy them.</li>
       <li>Paste them into the box below.</li>
+      <li>Click <strong>Get Pressure Data</strong>. The page will request the data directly from Open-Meteo.</li>
     </ol>
 
     <label class="field-label" for="coordinateInput">
@@ -302,24 +260,8 @@
       Enter coordinates in the format: latitude, longitude
     </p>
 
-    <div id="apiBox" class="api-box">
-
-      <div class="api-title">
-        Open-Meteo Pressure Data
-      </div>
-
-      <a
-        id="apiLink"
-        class="api-link"
-        href="#"
-        target="_blank"
-        rel="noopener noreferrer"
-      >
-        Get Pressure JSON →
-      </a>
-
-      <div id="apiUrl" class="api-url"></div>
-
+    <div class="actions">
+      <button id="getPressure">Get Pressure Data</button>
     </div>
 
     <div id="coordinateMessage" class="message" aria-live="polite"></div>
@@ -329,26 +271,11 @@
 
   <div class="card">
 
-    <h2>2. Paste the Open-Meteo JSON</h2>
+    <h2>2. Pressure Data</h2>
 
-    <label class="json-label" for="jsonInput">
-      JSON report
-    </label>
-
-    <p class="rules" style="margin-top: 0; margin-bottom: 12px;">
-      Copy the <strong>raw JSON</strong> from the Open-Meteo page and paste it into the box below.
+    <p class="rules" style="margin-top: 0; margin-bottom: 0;">
+      Pressure data is requested automatically from Open-Meteo when you click <strong>Get Pressure Data</strong>.
     </p>
-
-    <textarea
-      id="jsonInput"
-      spellcheck="false"
-      placeholder="Paste your JSON report here..."
-    ></textarea>
-
-    <div class="actions">
-      <button id="generate">Generate Table</button>
-      <button id="clear" class="secondary">Clear</button>
-    </div>
 
     <div id="message" class="message" aria-live="polite"></div>
 
@@ -401,23 +328,11 @@
   const coordinateInput =
     document.getElementById("coordinateInput");
 
-  const apiBox =
-    document.getElementById("apiBox");
-
-  const apiLink =
-    document.getElementById("apiLink");
-
-  const apiUrl =
-    document.getElementById("apiUrl");
-
   const coordinateMessage =
     document.getElementById("coordinateMessage");
 
-  const input =
-    document.getElementById("jsonInput");
-
-  const generate =
-    document.getElementById("generate");
+  const getPressure =
+    document.getElementById("getPressure");
 
   const clear =
     document.getElementById("clear");
@@ -488,38 +403,26 @@
   }
 
 
-  function updateApiLink() {
+  async function getPressureData() {
 
     const coords =
       parseCoordinates(
         coordinateInput.value.trim()
       );
 
-
     if (!coords) {
-
-      apiBox.classList.remove("visible");
-
-      if (coordinateInput.value.trim()) {
-        setCoordinateMessage(
-          "Please paste coordinates in the format: latitude, longitude",
-          true
-        );
-      } else {
-        setCoordinateMessage("");
-      }
-
+      setCoordinateMessage(
+        "Please paste coordinates in the format: latitude, longitude",
+        true
+      );
       return;
-
     }
-
 
     const latitude =
       coords.latitude.toFixed(12);
 
     const longitude =
       coords.longitude.toFixed(12);
-
 
     const url =
       "https://api.open-meteo.com/v1/gfs" +
@@ -530,23 +433,40 @@
       "&timezone=America%2FNew_York" +
       "&forecast_hours=25";
 
+    setCoordinateMessage("Requesting pressure data from Open-Meteo...");
 
-    apiLink.href = url;
+    getPressure.disabled = true;
 
-    apiUrl.textContent = url;
+    try {
+      const response = await fetch(url);
 
-    apiBox.classList.add("visible");
+      if (!response.ok) {
+        throw new Error(`Open-Meteo returned HTTP ${response.status}.`);
+      }
 
-    setCoordinateMessage(
-      "Coordinates accepted. Your Open-Meteo link is ready."
-    );
+      const data = await response.json();
 
+      generateTable(data);
+
+      setCoordinateMessage(
+        "Pressure data received from Open-Meteo."
+      );
+
+    } catch (error) {
+      setCoordinateMessage(
+        "Couldn't retrieve pressure data. " +
+        (error.message || "Please try again."),
+        true
+      );
+    } finally {
+      getPressure.disabled = false;
+    }
   }
 
 
-  coordinateInput.addEventListener(
-    "input",
-    updateApiLink
+  getPressure.addEventListener(
+    "click",
+    getPressureData
   );
 
 
@@ -606,7 +526,7 @@
   }
 
 
-  function generateTable() {
+  function generateTable(data) {
 
     setMessage("");
 
@@ -617,25 +537,6 @@
     copy.style.display = "none";
 
     empty.hidden = false;
-
-
-    let data;
-
-    try {
-
-      data =
-        JSON.parse(input.value);
-
-    } catch (e) {
-
-      setMessage(
-        "That doesn't appear to be valid JSON.",
-        true
-      );
-
-      return;
-
-    }
 
 
     const hourly =
@@ -797,17 +698,7 @@
     "click",
     () => {
 
-      input.value = "";
-
       coordinateInput.value = "";
-
-      apiBox.classList.remove(
-        "visible"
-      );
-
-      apiLink.href = "#";
-
-      apiUrl.textContent = "";
 
       tbody.innerHTML = "";
 
@@ -855,17 +746,7 @@
   );
 
 
-  input.addEventListener(
-    "paste",
-    () => {
 
-      setTimeout(
-        generateTable,
-        0
-      );
-
-    }
-  );
 
 })();
 </script>
