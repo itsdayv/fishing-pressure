@@ -36,16 +36,3 @@ A zero-backend GitHub Pages site that takes the coordinates of your fishing spot
 
 Pressure data comes from the Open-Meteo forecast API (`https://api.open-meteo.com/v1/forecast`), called directly from the browser. No API key or backend is needed. To use the GFS/HRRR model instead, swap the endpoint in `index.html` to `https://api.open-meteo.com/v1/gfs`.
 
-## Hosting on GitHub Pages
-
-1. Create a GitHub repository.
-2. Upload `index.html`.
-3. Go to **Settings → Pages**.
-4. Set the deployment source to the repository's `main` branch and the root folder.
-5. Save. GitHub will publish the page.
-
-## Files
-
-- `index.html`: the whole app (HTML, CSS, and JavaScript in one file)
-- `README.md`: this file
-
